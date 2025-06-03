@@ -23,6 +23,11 @@ db.connect((err) => {
     }
 });
 
+// Menjalankan server pada port 8001
+app.listen(8001, () => {
+    console.log("Server is running on port 8001");
+});
+
 // Endpoint untuk register
 app.post('/register', (req, res) => {
     const { nama, email, password, role } = req.body;
@@ -134,27 +139,23 @@ app.post('/updateUserProfile/:email', (req, res) => {
     });
 });
 
-// Endpoint untuk menyimpan peminjaman inventaris
+// Endpoint untuk menerima data peminjaman inventaris
 app.post('/submitPeminjaman', (req, res) => {
-    const { nama, barang, tglMulai, tglSelesai, keperluan } = req.body;
+  const { email, nama, barang, tglMulai, tglSelesai, keperluan } = req.body;
 
-    // Menyiapkan query untuk menyimpan data
-    const insertQuery = "INSERT INTO peminjaman_inventaris (nama, barang, tglMulai, tglSelesai, keperluan) VALUES (?, ?, ?, ?, ?)";
+  // Insert data peminjaman ke database, termasuk email dan barang sebagai string
+  const insertQuery = `
+    INSERT INTO peminjaman_inventaris (email, nama, barang, tgl_mulai, tgl_selesai, keperluan)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+  
+  db.query(insertQuery, [email, nama, barang, tglMulai, tglSelesai, keperluan], (err, result) => {
+    if (err) {
+      console.error('Error inserting peminjaman:', err);
+      return res.status(500).send('Server error');
+    }
 
-    // Mengubah array barang menjadi string
-    const barangString = barang.join(", ");
-
-    db.query(insertQuery, [nama, barangString, tglMulai, tglSelesai, keperluan], (err, result) => {
-        if (err) {
-            console.error("Error memasukkan peminjaman:", err);
-            return res.status(500).send('Server error');
-        }
-
-        res.status(200).json({ message: 'Peminjaman inventaris berhasil disubmit' });
-    });
+    res.status(200).json({ message: 'Peminjaman berhasil dikirim' });
+  });
 });
 
-// Menjalankan server pada port 8001
-app.listen(8001, () => {
-    console.log("Server is running on port 8001");
-});
