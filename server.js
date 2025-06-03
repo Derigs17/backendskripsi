@@ -145,8 +145,8 @@ app.post('/submitPeminjaman', (req, res) => {
 
   // Insert data peminjaman ke database, termasuk email dan barang sebagai string
   const insertQuery = `
-    INSERT INTO peminjaman_inventaris (email, nama, barang, tgl_mulai, tgl_selesai, keperluan)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO peminjaman_inventaris (email, nama, barang, tgl_mulai, tgl_selesai, keperluan, status)
+    VALUES (?, ?, ?, ?, ?, ?, 'Menunggu')
   `;
   
   db.query(insertQuery, [email, nama, barang, tglMulai, tglSelesai, keperluan], (err, result) => {
@@ -154,8 +154,46 @@ app.post('/submitPeminjaman', (req, res) => {
       console.error('Error inserting peminjaman:', err);
       return res.status(500).send('Server error');
     }
-
     res.status(200).json({ message: 'Peminjaman berhasil dikirim' });
   });
 });
 
+// Endpoint untuk mendapatkan riwayat peminjaman berdasarkan email
+app.get('/getRiwayatPeminjaman/:email', (req, res) => {
+  const email = req.params.email;
+  const sql = "SELECT * FROM peminjaman_inventaris WHERE email = ?";
+  db.query(sql, [email], (err, result) => {
+    if (err) {
+      console.error("Error fetching riwayat peminjaman:", err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json(result);
+  });
+});
+
+// Endpoint untuk mendapatkan semua riwayat peminjaman (admin)
+app.get('/getAllRiwayatPeminjaman', (req, res) => {
+  const sql = "SELECT * FROM peminjaman_inventaris";
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error("Error fetching all riwayat peminjaman:", err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json(result);
+  });
+});
+
+// Endpoint untuk memperbarui status peminjaman
+app.post('/updateStatusPeminjaman/:id', (req, res) => {
+  const { status } = req.body;
+  const { id } = req.params;
+
+  const updateQuery = "UPDATE peminjaman_inventaris SET status = ? WHERE id = ?";
+  db.query(updateQuery, [status, id], (err, result) => {
+    if (err) {
+      console.error("Error updating status:", err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json({ message: 'Status updated successfully' });
+  });
+});
