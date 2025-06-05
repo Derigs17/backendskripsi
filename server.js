@@ -197,3 +197,84 @@ app.post('/updateStatusPeminjaman/:id', (req, res) => {
     res.status(200).json({ message: 'Status updated successfully' });
   });
 });
+
+// Endpoint untuk menambahkan jadwal Imam
+app.post('/addJadwalImam', (req, res) => {
+    const { tanggal, imam, khatib, muazin, bilal } = req.body;
+
+    const sql = `
+        INSERT INTO jadwal_imam (tanggal, imam, khatib, muazin, bilal)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+    
+    db.query(sql, [tanggal, imam, khatib, muazin, bilal], (err, result) => {
+        if (err) {
+            console.error("Error inserting jadwal:", err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json({ success: true, message: 'Jadwal berhasil ditambahkan' });
+    });
+});
+
+// Endpoint untuk mengambil jadwal berdasarkan bulan dan tahun
+app.get('/getJadwalImamForMonth', (req, res) => {
+    const { bulan, tahun } = req.query; // Ambil bulan dan tahun dari query params
+
+    const sql = `
+        SELECT * FROM jadwal_imam 
+        WHERE MONTH(tanggal) = ? AND YEAR(tanggal) = ?
+    `;
+    
+    db.query(sql, [bulan, tahun], (err, result) => {
+        if (err) {
+            console.error("Error fetching jadwal Imam:", err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json(result); // Kirim data jadwal yang ditemukan
+    });
+});
+// Endpoint untuk mengupdate jadwal Imam
+app.post('/updateJadwalImam/:id', (req, res) => {
+    const { tanggal, imam, khatib, muazin, bilal } = req.body;
+    const { id } = req.params;
+
+    const sql = `
+        UPDATE jadwal_imam SET tanggal = ?, imam = ?, khatib = ?, muazin = ?, bilal = ? 
+        WHERE id = ?
+    `;
+    
+    db.query(sql, [tanggal, imam, khatib, muazin, bilal, id], (err, result) => {
+        if (err) {
+            console.error("Error updating jadwal Imam:", err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json({ success: true, message: 'Jadwal updated successfully' });
+    });
+});
+
+// Endpoint untuk menghapus jadwal Imam
+app.delete('/deleteJadwalImam/:id', (req, res) => {
+    const { id } = req.params;
+
+    const sql = "DELETE FROM jadwal_imam WHERE id = ?";
+    
+    db.query(sql, [id], (err, result) => {
+        if (err) {
+            console.error("Error deleting jadwal Imam:", err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json({ success: true, message: 'Jadwal deleted successfully' });
+    });
+});
+// Endpoint untuk mendapatkan semua jadwal Imam
+app.get('/getAllJadwalImam', (req, res) => {
+    const sql = "SELECT * FROM jadwal_imam ORDER BY tanggal ASC";  // Ambil semua data jadwal, urutkan berdasarkan tanggal
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error("Error fetching jadwal:", err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json(result); // Mengirim data jadwal dalam format JSON
+    });
+});
+
