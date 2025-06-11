@@ -139,6 +139,8 @@ app.post('/updateUserProfile/:email', (req, res) => {
     });
 });
 
+
+
 // Endpoint untuk menerima data peminjaman inventaris
 app.post('/submitPeminjaman', (req, res) => {
   const { email, nama, barang, tglMulai, tglSelesai, keperluan } = req.body;
@@ -197,6 +199,21 @@ app.post('/updateStatusPeminjaman/:id', (req, res) => {
     res.status(200).json({ message: 'Status updated successfully' });
   });
 });
+// Endpoint untuk menghapus riwayat peminjaman
+app.delete('/deleteRiwayatPeminjaman/:id', (req, res) => {
+  const { id } = req.params;
+
+  const sql = "DELETE FROM peminjaman_inventaris WHERE id = ?";
+  
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error("Error deleting peminjaman:", err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json({ message: 'Peminjaman deleted successfully' });
+  });
+});
+
 
 // Endpoint untuk menambahkan jadwal Imam
 app.post('/addJadwalImam', (req, res) => {
