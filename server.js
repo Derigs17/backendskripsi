@@ -277,4 +277,59 @@ app.get('/getAllJadwalImam', (req, res) => {
         res.status(200).json(result); // Mengirim data jadwal dalam format JSON
     });
 });
+  
+// Endpoint untuk mendapatkan pemasukan dan pengeluaran bulan ini
+app.get('/getLaporanKeuangan', (req, res) => {
+    const sqlPemasukan = "SELECT * FROM pemasukan WHERE MONTH(tanggal) = MONTH(CURRENT_DATE()) AND YEAR(tanggal) = YEAR(CURRENT_DATE())";
+    const sqlPengeluaran = "SELECT * FROM pengeluaran WHERE MONTH(tanggal) = MONTH(CURRENT_DATE()) AND YEAR(tanggal) = YEAR(CURRENT_DATE())";
 
+    // Mengambil pemasukan dan pengeluaran bulan ini
+    db.query(sqlPemasukan, (err, pemasukan) => {
+        if (err) {
+            console.error("Error fetching pemasukan:", err);
+            return res.status(500).send('Server error');
+        }
+
+        db.query(sqlPengeluaran, (err, pengeluaran) => {
+            if (err) {
+                console.error("Error fetching pengeluaran:", err);
+                return res.status(500).send('Server error');
+            }
+
+            res.status(200).json({
+                pemasukan: pemasukan,
+                pengeluaran: pengeluaran
+            });
+        });
+    });
+});
+
+// Endpoint untuk menambah pemasukan
+app.post('/addPemasukan', (req, res) => {
+    const { keterangan, jumlah, tanggal } = req.body;
+    const sql = "INSERT INTO pemasukan (keterangan, jumlah, tanggal) VALUES (?, ?, ?)";
+
+    db.query(sql, [keterangan, jumlah, tanggal], (err, result) => {
+        if (err) {
+            console.error("Error inserting pemasukan:", err);
+            return res.status(500).send('Server error');
+        }
+
+        res.status(200).json({ message: 'Pemasukan berhasil ditambahkan' });
+    });
+});
+
+// Endpoint untuk menambah pengeluaran
+app.post('/addPengeluaran', (req, res) => {
+    const { keterangan, jumlah, tanggal } = req.body;
+    const sql = "INSERT INTO pengeluaran (keterangan, jumlah, tanggal) VALUES (?, ?, ?)";
+
+    db.query(sql, [keterangan, jumlah, tanggal], (err, result) => {
+        if (err) {
+            console.error("Error inserting pengeluaran:", err);
+            return res.status(500).send('Server error');
+        }
+
+        res.status(200).json({ message: 'Pengeluaran berhasil ditambahkan' });
+    });
+}); 
