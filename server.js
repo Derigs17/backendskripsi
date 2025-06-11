@@ -139,6 +139,49 @@ app.post('/updateUserProfile/:email', (req, res) => {
     });
 });
 
+// Endpoint untuk mengambil semua user
+app.get('/getAllUsers', (req, res) => {
+    const sql = "SELECT * FROM user"; // Ambil semua data user
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error("Error fetching users:", err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json(result); // Mengirim data user dalam format JSON
+    });
+});
+app.post('/addUser', (req, res) => {
+    const { email, role, name, password } = req.body; // Mengambil email, role, name, dan password dari request body
+
+    // Validasi data email, role, name, dan password
+    if (!email || !role || !name || !password) {
+        return res.status(400).json({ message: 'Email, role, name, and password are required.' });
+    }
+
+    // Query untuk menambahkan user baru ke database
+    const insertQuery = "INSERT INTO user (email, role, name, password, is_login) VALUES (?, ?, ?, ?, 'isNotLogin')";
+    db.query(insertQuery, [email, role, name, password], (err, result) => {
+        if (err) {
+            console.error('Error inserting user:', err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json({ message: 'User added successfully' });
+    });
+});
+
+// Endpoint untuk menghapus user
+app.delete('/deleteUser/:email', (req, res) => {
+    const { email } = req.params;
+
+    const deleteQuery = "DELETE FROM user WHERE email = ?";
+    db.query(deleteQuery, [email], (err, result) => {
+        if (err) {
+            console.error("Error deleting user:", err);
+            return res.status(500).send('Server error');
+        }
+        res.status(200).json({ message: 'User deleted successfully' });
+    });
+});
 
 
 // Endpoint untuk menerima data peminjaman inventaris
