@@ -1,31 +1,49 @@
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path'); // Pastikan ini hanya ada sekali
+
 const app = express();
 
 // Middleware untuk menerima request body dalam format JSON
 app.use(cors());
 app.use(express.json());
 
+// Setup multer untuk upload gambar
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');  // Menyimpan file ke folder uploads
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));  // Gambar disimpan dengan nama unik
+  }
+});
+
+const upload = multer({ storage: storage });
+
+// Endpoint untuk melayani file gambar
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Koneksi ke database
 const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",    // Sesuaikan dengan user MySQL kamu
-    password: "",    // Jika ada password, sesuaikan
-    database: "masjid_ataqwa" // Nama database kamu
+  host: "localhost",
+  user: "root",    // Sesuaikan dengan user MySQL kamu
+  password: "",    // Jika ada password, sesuaikan
+  database: "masjid_ataqwa" // Nama database kamu
 });
 
 db.connect((err) => {
-    if (err) {
-        console.error('Error connecting to database:', err);
-    } else {
-        console.log('Connected to database');
-    }
+  if (err) {
+    console.error('Error connecting to database:', err);
+  } else {
+    console.log('Connected to database');
+  }
 });
 
 // Menjalankan server pada port 8001
 app.listen(8001, () => {
-    console.log("Server is running on port 8001");
+  console.log("Server is running on port 8001");
 });
 
 // Endpoint untuk register
@@ -446,4 +464,30 @@ app.delete('/deletePengeluaran/:id', (req, res) => {
         }
         res.status(200).json({ message: 'Pengeluaran deleted successfully' });
     });
+});
+// Endpoint untuk menambah kegiatan dengan gambar
+app.post('/addKegiatan', upload.single('gambar'), (req, res) => {
+  const { judul, tanggal, deskripsi, status } = req.body;
+  const gambar = req.file ? req.file.filename : 'bukabersama.png';  // Jika tidak ada gambar, gunakan gambar default
+
+  const insertQuery = "INSERT INTO kegiatan (judul, tanggal, deskripsi, gambar, status) VALUES (?, ?, ?, ?, ?)";
+  db.query(insertQuery, [judul, tanggal, deskripsi, gambar, status], (err, result) => {
+    if (err) {
+      console.error('Error inserting kegiatan:', err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json({ message: 'Kegiatan added successfully' });
+  });
+});
+
+// Endpoint untuk mendapatkan semua kegiatan
+app.get('/getAllKegiatan', (req, res) => {
+  const sql = "SELECT * FROM kegiatan";  // Ambil semua kegiatan
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error("Error fetching kegiatan:", err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json(result); // Kirim data kegiatan dalam format JSON
+  });
 });
