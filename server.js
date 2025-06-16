@@ -491,3 +491,17 @@ app.get('/getAllKegiatan', (req, res) => {
     res.status(200).json(result); // Kirim data kegiatan dalam format JSON
   });
 });
+
+app.post('/updateStatusKegiatan/:id', (req, res) => {
+  const { id } = req.params;
+  const status = 'Telah Selesai';  // Status yang baru setelah kegiatan selesai
+  
+  const updateQuery = "UPDATE kegiatan SET status = ? WHERE id = ?";
+  db.query(updateQuery, [status, id], (err, result) => {
+    if (err) {
+      console.error('Error updating status:', err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json({ message: 'Status kegiatan berhasil diubah' });
+  });
+});
