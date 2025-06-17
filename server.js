@@ -204,15 +204,15 @@ app.delete('/deleteUser/:email', (req, res) => {
 
 // Endpoint untuk menerima data peminjaman inventaris
 app.post('/submitPeminjaman', (req, res) => {
-  const { email, nama, barang, tglMulai, tglSelesai, keperluan } = req.body;
+  const { email, nama, barang, tglMulai, tglSelesai, keperluan, nomorTelepon } = req.body;
 
-  // Insert data peminjaman ke database, termasuk email dan barang sebagai string
+  // Insert data peminjaman ke database, termasuk email, barang, dan nomor telepon
   const insertQuery = `
-    INSERT INTO peminjaman_inventaris (email, nama, barang, tgl_mulai, tgl_selesai, keperluan, status)
-    VALUES (?, ?, ?, ?, ?, ?, 'Menunggu')
+    INSERT INTO peminjaman_inventaris (email, nama, barang, tgl_mulai, tgl_selesai, keperluan, nomor_telepon, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'Menunggu')
   `;
-  
-  db.query(insertQuery, [email, nama, barang, tglMulai, tglSelesai, keperluan], (err, result) => {
+
+  db.query(insertQuery, [email, nama, barang, tglMulai, tglSelesai, keperluan, nomorTelepon], (err, result) => {
     if (err) {
       console.error('Error inserting peminjaman:', err);
       return res.status(500).send('Server error');
@@ -221,10 +221,11 @@ app.post('/submitPeminjaman', (req, res) => {
   });
 });
 
+
 // Endpoint untuk mendapatkan riwayat peminjaman berdasarkan email
 app.get('/getRiwayatPeminjaman/:email', (req, res) => {
   const email = req.params.email;
-  const sql = "SELECT * FROM peminjaman_inventaris WHERE email = ?";
+  const sql = "SELECT id, email, nama, barang, tgl_mulai, tgl_selesai, keperluan, nomor_telepon, status FROM peminjaman_inventaris WHERE email = ?";
   db.query(sql, [email], (err, result) => {
     if (err) {
       console.error("Error fetching riwayat peminjaman:", err);
