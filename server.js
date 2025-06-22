@@ -506,3 +506,16 @@ app.post('/updateStatusKegiatan/:id', (req, res) => {
     res.status(200).json({ message: 'Status kegiatan berhasil diubah' });
   });
 });
+app.delete('/deleteKegiatan/:id', (req, res) => {
+  const { id } = req.params;
+
+  const sql = "DELETE FROM kegiatan WHERE id = ?";
+  
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error("Error deleting kegiatan:", err);
+      return res.status(500).send('Server error');
+    }
+    res.status(200).json({ message: 'Kegiatan deleted successfully' });
+  });
+});
