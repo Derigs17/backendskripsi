@@ -681,7 +681,6 @@ app.delete('/deleteKegiatan/:id', async (req, res) => {
 });
 
 
-// Endpoint untuk menambah kegiatan dengan gambar
 app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
   const { judul, tanggal, deskripsi, status } = req.body;
 
@@ -690,7 +689,9 @@ app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
     return res.status(400).send('Gambar harus di-upload');
   }
 
-  const filePath = `uploads/${req.file.originalname}`; // Tentukan nama file yang akan diupload
+  // Membuat nama file unik
+  const fileName = `${Date.now()}_${req.file.originalname}`;
+  const filePath = `uploads/${fileName}`;
 
   try {
     // Upload gambar ke Supabase Storage
@@ -719,7 +720,7 @@ app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
       return res.status(500).send('Error getting image URL');
     }
 
-    console.log("Public URL:", publicURL);  // Anda dapat menggunakan URL ini untuk disimpan ke database atau dikirimkan kembali ke frontend
+    console.log("Public URL:", publicURL);  // Pastikan URL ini ditampilkan dengan benar
 
     // Menyimpan data kegiatan ke Supabase
     const { error: insertError } = await supabase
