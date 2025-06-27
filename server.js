@@ -685,43 +685,43 @@ app.delete('/deleteKegiatan/:id', async (req, res) => {
 app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
   const { judul, tanggal, deskripsi, status } = req.body;
 
-  // Periksa apakah file gambar ada
+  // Cek jika tidak ada file gambar yang diupload
   if (!req.file) {
-    return res.status(400).send('Gambar harus di-upload');
+    return res.status(400).send('No file uploaded');
   }
 
-  const filePath = `uploads/${req.file.originalname}`; // Tentukan nama file yang akan diupload
+  const filePath = `uploads/${req.file.originalname}`;
 
   try {
     // Upload gambar ke Supabase Storage
     const { data, error: uploadError } = await supabase
       .storage
-      .from('gambarkegiatan')  // Nama bucket yang sudah dibuat di Supabase
+      .from('gambarkegiatan')
       .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
-        cacheControl: '3600',  // Set cache control
-        upsert: false  // Jangan menimpa file yang sudah ada
+        cacheControl: '3600',
+        upsert: false,
       });
 
     if (uploadError) {
       console.error('Error uploading file to Supabase:', uploadError);
-      return res.status(500).send('Error uploading file to Supabase');
+      return res.status(500).send('Error uploading file');
     }
 
     // Mendapatkan URL publik gambar setelah upload
     const { publicURL, error: urlError } = supabase
       .storage
-      .from('gambarkegiatan') // Nama bucket Anda di Supabase
+      .from('gambarkegiatan')
       .getPublicUrl(filePath);
 
     if (urlError) {
       console.error('Error fetching public URL:', urlError);
-      return res.status(500).send('Error getting image URL');
+      return res.status(500).send('Error getting file URL');
     }
 
-    console.log("Public URL:", publicURL);  // Anda dapat menggunakan URL ini untuk disimpan ke database atau dikirimkan kembali ke frontend
+    console.log('Uploaded to Supabase with URL:', publicURL);
 
-    // Menyimpan data kegiatan ke Supabase
+    // Menyimpan data kegiatan ke Supabase dengan URL gambar
     const { error: insertError } = await supabase
       .from('kegiatan')
       .insert([
@@ -729,8 +729,8 @@ app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
           judul,
           tanggal,
           deskripsi,
-          gambar: publicURL, // Menyimpan URL gambar ke database
-          status
+          gambar: publicURL, // Menyimpan URL publik gambar ke tabel kegiatan
+          status,
         }
       ]);
 
@@ -745,4 +745,3 @@ app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
-
