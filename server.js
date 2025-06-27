@@ -10,26 +10,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Setup multer untuk upload gambar
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');  // Menyimpan file ke folder uploads
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));  // Gambar disimpan dengan nama unik
-  }
-});
-
-const upload = multer({ storage: storage });
-
-// Endpoint untuk melayani file gambar
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // Koneksi ke Supabase
 const supabaseUrl = 'https://hqazfaqaambxdjhekljs.supabase.co';  // Ganti dengan URL Supabase Anda
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxYXpmYXFhYW1ieGRqaGVrbGpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5NTE4NTQsImV4cCI6MjA2NjUyNzg1NH0.h7lVpjJheQ3EusFuGCus5W9CxA51qfcKbU0-kdxjdJY';  // Ganti dengan API Key Supabase Anda
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Setup multer untuk menangani file upload
+const storage = multer.memoryStorage();  // Menggunakan memory storage untuk menyimpan file langsung ke buffer
+
+const upload = multer({ storage: storage });
 // Menjalankan server pada port 8001
 app.listen(8001, () => {
   console.log("Server is running on port 8001");
@@ -625,90 +614,123 @@ app.delete('/deletePengeluaran/:id', async (req, res) => {
 });
 
 
+
+
+
 // Endpoint untuk menambah kegiatan dengan gambar
 app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
   const { judul, tanggal, deskripsi, status } = req.body;
   const gambar = req.file ? req.file.originalname : 'bukabersama.png';  // Jika tidak ada gambar, gunakan gambar default
 
-  // Upload gambar ke Supabase
-  const { data, error: uploadError } = await supabase
-    .storage
-    .from('gambarkegiatan')  // Ganti dengan nama bucket yang sudah dibuat
-    .upload(gambar, req.file.buffer, {
-      cacheControl: '3600', // Set Cache-Control
-      upsert: false         // Jangan menimpa file yang sudah ada
-    });
+  try {
+    // Upload gambar ke Supabase Storage
+    const { data, error: uploadError } = await supabase
+      .storage
+      .from('gambarkegiatan')  // Nama bucket yang sudah dibuat di Supabase
+      .upload(gambar, req.file.buffer, {
+        cacheControl: '3600', // Set Cache-Control
+        upsert: false         // Jangan menimpa file yang sudah ada
+      });
 
-  if (uploadError) {
-    console.error('Error uploading file to Supabase:', uploadError);
-    return res.status(500).send('Error uploading file to Supabase');
+    if (uploadError) {
+      console.error('Error uploading file to Supabase:', uploadError);
+      return res.status(500).send('Error uploading file to Supabase');
+    }
+
+    // Mendapatkan URL publik gambar setelah berhasil upload
+    const { publicURL, error: urlError } = supabase
+      .storage
+      .from('gambarkegiatan')
+      .getPublicUrl(gambar);
+
+    if (urlError) {
+      console.error("Error getting public URL:", urlError);
+      return res.status(500).send('Error getting image URL');
+    }
+
+    console.log("Public URL:", publicURL);  // Anda dapat menggunakan URL ini untuk disimpan ke database atau dikirimkan kembali ke frontend
+
+    // Menyimpan data kegiatan ke Supabase
+    const { error: insertError } = await supabase
+      .from('kegiatan')
+      .insert([
+        { judul, tanggal, deskripsi, gambar: publicURL, status }
+      ]);
+
+    if (insertError) {
+      console.error('Error inserting kegiatan:', insertError);
+      return res.status(500).send('Error saving kegiatan');
+    }
+
+    res.status(200).json({ message: 'Kegiatan added successfully', publicURL });
+  } catch (error) {
+    console.error('Error during kegiatan upload:', error);
+    res.status(500).send('Internal Server Error');
   }
-
-  // Mendapatkan URL publik gambar setelah berhasil upload
-  const { publicURL, error: urlError } = supabase
-    .storage
-    .from('gambarkegiatan')
-    .getPublicUrl(gambar);
-
-  if (urlError) {
-    console.error("Error getting public URL:", urlError);
-    return res.status(500).send('Error getting image URL');
-  }
-
-  console.log("Public URL:", publicURL);  // Anda dapat menggunakan URL ini untuk disimpan ke database atau dikirimkan kembali ke frontend
-
-  // Menyimpan data kegiatan ke Supabase
-  const { error: insertError } = await supabase
-    .from('kegiatan')
-    .insert([
-      { judul, tanggal, deskripsi, gambar: publicURL, status }
-    ]);
-
-  if (insertError) {
-    console.error('Error inserting kegiatan:', insertError);
-    return res.status(500).send('Error saving kegiatan');
-  }
-
-  res.status(200).json({ message: 'Kegiatan added successfully', publicURL });
 });
 
 
+// Endpoint untuk mendapatkan semua kegiatan
+app.get('/getAllKegiatan', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('kegiatan').select('*'); // Mengambil semua kegiatan dari Supabase
 
-// // Endpoint untuk mendapatkan semua kegiatan
-// app.get('/getAllKegiatan', (req, res) => {
-//   const sql = "SELECT * FROM kegiatan";  // Ambil semua kegiatan
-//   db.query(sql, (err, result) => {
-//     if (err) {
-//       console.error("Error fetching kegiatan:", err);
-//       return res.status(500).send('Server error');
-//     }
-//     res.status(200).json(result); // Kirim data kegiatan dalam format JSON
-//   });
-// });
-// //status kegiatan
-// app.post('/updateStatusKegiatan/:id', (req, res) => {
-//   const { id } = req.params;
-//   const status = 'Telah Selesai';  // Status yang baru setelah kegiatan selesai
-  
-//   const updateQuery = "UPDATE kegiatan SET status = ? WHERE id = ?";
-//   db.query(updateQuery, [status, id], (err, result) => {
-//     if (err) {
-//       console.error('Error updating status:', err);
-//       return res.status(500).send('Server error');
-//     }
-//     res.status(200).json({ message: 'Status kegiatan berhasil diubah' });
-//   });
-// });
-// app.delete('/deleteKegiatan/:id', (req, res) => {
-//   const { id } = req.params;
+    if (error) {
+      console.error("Error fetching kegiatan:", error);
+      return res.status(500).send('Server error');
+    }
 
-//   const sql = "DELETE FROM kegiatan WHERE id = ?";
-  
-//   db.query(sql, [id], (err, result) => {
-//     if (err) {
-//       console.error("Error deleting kegiatan:", err);
-//       return res.status(500).send('Server error');
-//     }
-//     res.status(200).json({ message: 'Kegiatan deleted successfully' });
-//   });
-// });
+    res.status(200).json(data); // Mengirimkan data kegiatan dalam format JSON
+  } catch (err) {
+    console.error('Error fetching kegiatan:', err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+// Endpoint untuk mengupdate status kegiatan
+app.post('/updateStatusKegiatan/:id', async (req, res) => {
+  const { id } = req.params;
+  const status = 'Telah Selesai';  // Status yang baru setelah kegiatan selesai
+
+  try {
+    // Mengupdate status kegiatan di Supabase
+    const { data, error } = await supabase
+      .from('kegiatan')
+      .update({ status }) // Mengupdate status menjadi 'Telah Selesai'
+      .eq('id', id);  // Filter berdasarkan id kegiatan yang ingin diupdate
+
+    if (error) {
+      console.error('Error updating status:', error);
+      return res.status(500).send('Server error');
+    }
+
+    res.status(200).json({ message: 'Status kegiatan berhasil diubah' });
+  } catch (err) {
+    console.error('Error updating status:', err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Endpoint untuk menghapus kegiatan
+app.delete('/deleteKegiatan/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Menghapus kegiatan dari Supabase
+    const { data, error } = await supabase
+      .from('kegiatan')
+      .delete()
+      .eq('id', id); // Menghapus kegiatan berdasarkan ID
+
+    if (error) {
+      console.error('Error deleting kegiatan:', error);
+      return res.status(500).send('Server error');
+    }
+
+    res.status(200).json({ message: 'Kegiatan deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting kegiatan:', err);
+    res.status(500).send('Internal Server Error');
+  }
+});
