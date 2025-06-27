@@ -620,7 +620,7 @@ app.delete('/deletePengeluaran/:id', async (req, res) => {
 // Endpoint untuk menambah kegiatan dengan gambar
 app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
   const { judul, tanggal, deskripsi, status } = req.body;
-  const gambar = req.file ? req.file.originalname : 'bukabersama.png';  // Jika tidak ada gambar, gunakan gambar default
+  const gambar = req.file ? req.file.originalname : 'default-image.png';  // Jika tidak ada gambar, gunakan gambar default
 
   try {
     // Upload gambar ke Supabase Storage
