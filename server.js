@@ -17,8 +17,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Setup multer untuk menangani file upload
 const storage = multer.memoryStorage();  // Menggunakan memory storage untuk menyimpan file langsung ke buffer
-
 const upload = multer({ storage: storage });
+
 // Menjalankan server pada port 8001
 app.listen(8001, () => {
   console.log("Server is running on port 8001");
@@ -615,61 +615,6 @@ app.delete('/deletePengeluaran/:id', async (req, res) => {
 
 
 
-
-
-// Endpoint untuk menambah kegiatan dengan gambar
-app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
-  const { judul, tanggal, deskripsi, status } = req.body;
-  const gambar = req.file ? req.file.originalname : 'default-image.png';  // Jika tidak ada gambar, gunakan gambar default
-
-  try {
-    // Upload gambar ke Supabase Storage
-    const { data, error: uploadError } = await supabase
-      .storage
-      .from('gambarkegiatan')  // Nama bucket yang sudah dibuat di Supabase
-      .upload(gambar, req.file.buffer, {
-        cacheControl: '3600', // Set Cache-Control
-        upsert: false         // Jangan menimpa file yang sudah ada
-      });
-
-    if (uploadError) {
-      console.error('Error uploading file to Supabase:', uploadError);
-      return res.status(500).send('Error uploading file to Supabase');
-    }
-
-    // Mendapatkan URL publik gambar setelah berhasil upload
-    const { publicURL, error: urlError } = supabase
-      .storage
-      .from('gambarkegiatan')
-      .getPublicUrl(gambar);
-
-    if (urlError) {
-      console.error("Error getting public URL:", urlError);
-      return res.status(500).send('Error getting image URL');
-    }
-
-    console.log("Public URL:", publicURL);  // Anda dapat menggunakan URL ini untuk disimpan ke database atau dikirimkan kembali ke frontend
-
-    // Menyimpan data kegiatan ke Supabase
-    const { error: insertError } = await supabase
-      .from('kegiatan')
-      .insert([
-        { judul, tanggal, deskripsi, gambar: publicURL, status }
-      ]);
-
-    if (insertError) {
-      console.error('Error inserting kegiatan:', insertError);
-      return res.status(500).send('Error saving kegiatan');
-    }
-
-    res.status(200).json({ message: 'Kegiatan added successfully', publicURL });
-  } catch (error) {
-    console.error('Error during kegiatan upload:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-
 // Endpoint untuk mendapatkan semua kegiatan
 app.get('/getAllKegiatan', async (req, res) => {
   try {
@@ -734,3 +679,70 @@ app.delete('/deleteKegiatan/:id', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
+
+// Endpoint untuk menambah kegiatan dengan gambar
+app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
+  const { judul, tanggal, deskripsi, status } = req.body;
+
+  // Periksa apakah file gambar ada
+  if (!req.file) {
+    return res.status(400).send('Gambar harus di-upload');
+  }
+
+  const filePath = `uploads/${req.file.originalname}`; // Tentukan nama file yang akan diupload
+
+  try {
+    // Upload gambar ke Supabase Storage
+    const { data, error: uploadError } = await supabase
+      .storage
+      .from('gambarkegiatan')  // Nama bucket yang sudah dibuat di Supabase
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        cacheControl: '3600',  // Set cache control
+        upsert: false  // Jangan menimpa file yang sudah ada
+      });
+
+    if (uploadError) {
+      console.error('Error uploading file to Supabase:', uploadError);
+      return res.status(500).send('Error uploading file to Supabase');
+    }
+
+    // Mendapatkan URL publik gambar setelah upload
+    const { publicURL, error: urlError } = supabase
+      .storage
+      .from('gambarkegiatan') // Nama bucket Anda di Supabase
+      .getPublicUrl(filePath);
+
+    if (urlError) {
+      console.error('Error fetching public URL:', urlError);
+      return res.status(500).send('Error getting image URL');
+    }
+
+    console.log("Public URL:", publicURL);  // Anda dapat menggunakan URL ini untuk disimpan ke database atau dikirimkan kembali ke frontend
+
+    // Menyimpan data kegiatan ke Supabase
+    const { error: insertError } = await supabase
+      .from('kegiatan')
+      .insert([
+        {
+          judul,
+          tanggal,
+          deskripsi,
+          gambar: publicURL, // Menyimpan URL gambar ke database
+          status
+        }
+      ]);
+
+    if (insertError) {
+      console.error('Error inserting kegiatan:', insertError);
+      return res.status(500).send('Error saving kegiatan');
+    }
+
+    res.status(200).json({ message: 'Kegiatan added successfully', publicURL });
+  } catch (error) {
+    console.error('Error during kegiatan upload:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
