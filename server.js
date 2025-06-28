@@ -19,9 +19,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const storage = multer.memoryStorage();  // Menggunakan memory storage untuk menyimpan file langsung ke buffer
 const upload = multer({ storage: storage });
 
-// Menjalankan server pada port 8001
-app.listen(8001, () => {
-  console.log("Server is running on port 8001");
+const port = process.env.PORT || 3000; // Gunakan PORT dari environment (Vercel) atau default ke 3000
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
 
 // Endpoint untuk tes koneksi dan ambil data dari Supabase
@@ -752,3 +752,6 @@ app.post('/addKegiatan', upload.single('gambar'), async (req, res) => {
 });
 
 
+
+// Export handler untuk Vercel
+module.exports = app; // Ini untuk memastikan aplikasi berjalan dengan benar di Vercel
